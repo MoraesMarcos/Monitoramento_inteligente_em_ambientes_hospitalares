@@ -1,0 +1,98 @@
+#1 - Detecção de faces
+
+import cv2
+import face_recognition
+import os
+import tkinter as tk
+from tkinter import simpledialog
+from tkinter import messagebox
+
+# Variáveis para contar os rostos
+total_reconhecidos = 0
+total_cadastrados = 0
+reconhecidos_corretamente = 0
+
+# Inicialização da janela do tkinter
+root = tk.Tk()
+root.withdraw()
+
+# Função para cadastrar uma nova pessoa
+def cadastrar_pessoa(nome, imagem):
+    global total_cadastrados
+    pasta_cadastro = "cadastros"
+    if not os.path.exists(pasta_cadastro):
+        os.makedirs(pasta_cadastro)
+    cv2.imwrite(os.path.join(pasta_cadastro, nome + ".jpg"), imagem)
+    print("Pessoa cadastrada com sucesso!")
+    total_cadastrados += 1
+
+# Função para reconhecer a pessoa
+def reconhecer_pessoa(imagem):
+    global total_reconhecidos, reconhecidos_corretamente
+    pasta_cadastro = "cadastros"
+    if not os.path.exists(pasta_cadastro):
+        print("Nenhum cadastro encontrado.")
+        return None
+    lista_cadastros = os.listdir(pasta_cadastro)
+    total_reconhecidos += 1
+    for arquivo in lista_cadastros:
+        imagem_cadastro = face_recognition.load_image_file(os.path.join(pasta_cadastro, arquivo))
+        codificacoes_cadastro = face_recognition.face_encodings(imagem_cadastro)
+        if len(codificacoes_cadastro) == 0:
+            continue
+        encoding_cadastro = codificacoes_cadastro[0]
+        encoding_desconhecido = face_recognition.face_encodings(imagem)
+        if len(encoding_desconhecido) > 0:
+            match = face_recognition.compare_faces([encoding_cadastro], encoding_desconhecido[0])
+            if match[0]:
+                reconhecidos_corretamente += 1
+                return arquivo.split(".")[0]  # Retorna o nome da pessoa
+    return None
+
+# Função para processar os rostos no frame
+def processar_frame(frame):
+    global root
+    rostos = face_recognition.face_locations(frame)
+    pessoa_cadastrada = reconhecer_pessoa(frame)
+
+    for (top, right, bottom, left) in rostos:
+        cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+        if pessoa_cadastrada:
+            cv2.putText(frame, f"{pessoa_cadastrada} ja cadastrado", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        else:
+            # Captura a imagem do rosto para cadastro
+            face_image = frame[top:bottom, left:right]
+            nome_pessoa = simpledialog.askstring("Cadastro", "Digite o nome da pessoa:")
+            if nome_pessoa:
+                cadastrar_pessoa(nome_pessoa, face_image)
+                pessoa_cadastrada = reconhecer_pessoa(frame)
+
+    return frame
+
+# Inicialização da captura de vídeo
+captura = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = captura.read()
+    if not ret:
+        break
+
+    # Processar o frame para reconhecimento facial
+    frame = processar_frame(frame)
+
+    # Calcular a porcentagem de acurácia
+    if total_reconhecidos > 0:
+        acuracia = (reconhecidos_corretamente / total_reconhecidos) * 100
+        cv2.putText(frame, f"Acuracia: {acuracia:.2f}%", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+    # Exibir a imagem com as detecções
+    cv2.imshow('Reconhecimento Facial', frame)
+
+    # Pressione 'q' para sair do loop
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Libera a captura de vídeo e fecha todas as janelas
+captura.release()
+cv2.destroyAllWindows()
+root.quit()
