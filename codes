@@ -96,3 +96,45 @@ while True:
 captura.release()
 cv2.destroyAllWindows()
 root.quit()
+
+______________________________________________________________________________________________________________
+
+#2- Detecção de quedas
+
+
+from cvzone.PoseModule import PoseDetector
+import cv2
+import cvzone
+
+# Inicializar a captura de vídeo da webcam
+cap = cv2.VideoCapture(0)
+
+detector = PoseDetector()
+
+while True:
+    # Capturar o frame da webcam
+    ret, img = cap.read()
+    img = cv2.resize(img, (1280, 720))  # Redimensionar para as dimensões desejadas
+
+    resultado = detector.findPose(img)
+    pontos, bbox = detector.findPosition(img, draw=False)
+
+    if len(pontos) >= 1:
+        x, y, w, h = bbox['bbox']
+        cabeca = pontos[0][1]
+        joelho = pontos[26][1]
+        print(cabeca, joelho)
+        diferenca = joelho - cabeca
+
+        if diferenca <= 0:
+            cvzone.putTextRect(img, 'QUEDA DETECTADA', (x, y - 80), scale=3, thickness=3, colorR=(0, 0, 255))
+
+    cv2.imshow('IMG', img)
+
+    # Pressione 'q' para sair do loop
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+# Liberar a captura de vídeo e fechar a janela
+cap.release()
+cv2.destroyAllWindows()
