@@ -1,4 +1,4 @@
-#1 - Detecção de faces
+#1 - Detecção de faces(Marcos)
 
 import cv2
 import face_recognition
@@ -99,7 +99,7 @@ root.quit()
 
 ______________________________________________________________________________________________________________
 
-#2- Detecção de quedas
+#2- Detecção de quedas(Marcos)
 
 
 from cvzone.PoseModule import PoseDetector
